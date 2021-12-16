@@ -20,3 +20,5 @@ Displays COVID data for selected country during a given time range
 ![image](https://user-images.githubusercontent.com/96243400/146383773-3e177dca-641d-4299-9d7e-3077ccd640f7.png)
 
 
+![image](https://user-images.githubusercontent.com/96243400/146385874-777c7b58-97cf-4116-bc37-87a8e36b73af.png)
+

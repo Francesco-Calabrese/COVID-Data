@@ -1,0 +1,550 @@
+Private dateExists
+Private CountryIndex
+Private CountryIndexFirstIteration As Boolean
+Private ws As Worksheet
+Private CountrySelected
+Private StateSelected
+Private CountySelected
+Private AmountOfDaysAdded
+
+'clears the data from the data sheet and some of the data from the COVID Data sheet
+Private Sub ClearDataCommandBtn_Click()
+    
+    'clears the data on the data sheet
+    Set ws = Sheets("Data Sheet")
+    ws.Cells.Clear
+    
+    'clears the data on the COVID Data sheet
+    Range(Cells(1, 7), Cells(5, Columns.Count)).ClearContents
+    
+    Range("G1").Value = "Date:"
+    Range("G2").Value = "Cases:"
+    Range("G3").Value = "Deaths:"
+    
+    'clears the selected country, state, and county
+    CountryComboBox.Value = ""
+    StateComboBox.Value = ""
+    CountyComboBox.Value = ""
+    StateComboBox.Visible = False
+    CountyComboBox.Visible = False
+    Cells(13, 4).Clear
+    Cells(14, 4).Clear
+    Cells(17, 4).Clear
+    Cells(18, 4).Clear
+    
+    'hides the percentage change button
+    PercentChangedCommandBtn.Visible = False
+
+End Sub
+
+'the main method of this program. begins the process of fetching data,
+'saving data, parsing data, and displaying data.
+Private Sub GetDataCommandBtn_Click()
+
+    'initalizes global variables
+    AmountOfDaysAdded = 0
+    CountryIndex = 1
+    CountryIndexFirstIteration = True
+    CountrySelected = Range("D10")
+    StateSelected = Range("D14")
+    CountySelected = Range("D18")
+    
+    Set ws = Sheets("Data Sheet")
+    
+    'sets the date range
+    startDateCOVID = Range("D6")
+    endDateCOVID = Range("E6")
+    
+    'checks to see if the user selected a country
+    If Range("D10") <> "" Then
+        'checks to see if US was selected as the country
+        If Range("D10") = "US" Then
+            'if US is selected, checks that both state and county are selected
+            If Range("D14") = "" Or Range("D18") = "" Then
+                MsgBox "select a state and county"
+            Else
+                'gets the data from the date range set
+                If startDateCOVID Like "##-##-####" And endDateCOVID Like "##-##-####" Then
+                    GetDataSheet startDateCOVID, endDateCOVID
+                    'displays the percentage change button
+                    PercentChangedCommandBtn.Visible = True
+                Else
+                    MsgBox ("Please update the date format to match MM-DD-YYYY, ex: 01-05-2021")
+                End If
+            End If
+        Else
+            'gets the data from the date range set
+            If startDateCOVID Like "##-##-####" And endDateCOVID Like "##-##-####" Then
+                GetDataSheet startDateCOVID, endDateCOVID
+                'displays the percentage change button
+                PercentChangedCommandBtn.Visible = True
+            Else
+                MsgBox ("Please update the date format to match MM-DD-YYYY, ex: 01-05-2021")
+            End If
+        End If
+    Else
+        MsgBox "select a country"
+    End If
+    
+    'deletes all of the open connections in the workbook
+    Dim conn As WorkbookConnection
+    For Each conn In ActiveWorkbook.Connections
+        conn.Delete
+    Next conn
+    
+    'return view to main sheet
+    Sheets("COVID Data").Activate
+    
+End Sub
+
+Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
+    
+    Dim startArr() As Integer
+    Dim endArr() As Integer
+    Dim startStrArr() As String
+    Dim endStrArr() As String
+    Dim numberOfDays As Integer
+    Dim tempDate
+    Dim finishedFirstMonth As Boolean
+    Dim i
+    Dim j
+    Dim k
+    
+    ReDim startArr(0 To 0)
+    ReDim endArr(0 To 0)
+    
+    startStrArr = Split(startDateCOVID, "-")
+    endStrArr = Split(endDateCOVID, "-")
+    
+    'dates stored in start and stop arrays in the form:
+    'arr(0) = month, arr(1) = day, arr(2) = year
+    For i = 0 To 2
+        ReDim Preserve startArr(0 To i)
+        ReDim Preserve endArr(0 To i)
+        startArr(i) = CInt(startStrArr(i))
+        endArr(i) = CInt(endStrArr(i))
+    Next i
+    
+    'gets the total number of days between the start and stop days
+    numberOfDays = getTotalDays(startArr, endArr)
+    
+    'gets the data and stores it to the data page, then gets the relevant data
+    'and stores it on the COVID main page
+    i = 0
+    j = 0
+    k = 0
+    AmountOfDaysAdded = 0
+    finishedFirstMonth = False
+    'checks to see if the start and end years are the same
+    If startArr(2) = endArr(2) Then
+        'gets the data from the months between start and end months
+        While (startArr(0) + j) <> endArr(0)
+            'gets the daily data from each month. the first month will go
+            'from the start date to the end of the month
+            If Not finishedFirstMonth Then
+                i = 0
+                While (startArr(1) + i) <> (GetDaysInMonth(startArr(0) + j) + 1)
+                    tempDate = formatDate(startArr(0) + j, startArr(1) + i, startArr(2))
+                    getData tempDate
+                    displayData AmountOfDaysAdded, tempDate
+                    finishedFirstMonth = True
+                    AmountOfDaysAdded = AmountOfDaysAdded + 1
+                    Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                    i = i + 1
+                Wend
+            Else
+                'the remaining months will go to the end of the month until the
+                'start and end months are the same
+                i = 1
+                While i <> (GetDaysInMonth(startArr(0) + j) + 1)
+                    tempDate = formatDate(startArr(0) + j, i, startArr(2))
+                    getData tempDate
+                    displayData AmountOfDaysAdded, tempDate
+                    AmountOfDaysAdded = AmountOfDaysAdded + 1
+                    Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                    i = i + 1
+                Wend
+            End If
+            j = j + 1
+        Wend
+        'start and end months are now the same. will iterate from the first
+        'to the end date of the month
+        i = 1
+        While i <> (endArr(1) + 1)
+            tempDate = formatDate(startArr(0) + j, i, startArr(2))
+            getData tempDate
+            displayData AmountOfDaysAdded, tempDate
+            AmountOfDaysAdded = AmountOfDaysAdded + 1
+            Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+            i = i + 1
+        Wend
+    Else
+        'start and end years are different
+        k = 0
+        finishedFirstMonth = False
+        While (startArr(2) + k) <> endArr(2)
+            j = 0
+            'iterates through the end of the year
+            While (startArr(0) + j) <> 13
+                i = 0
+                'the first month will go from the start date to the end of the month
+                If Not finishedFirstMonth Then
+                    While (startArr(1) + i) <> (GetDaysInMonth(startArr(0) + j) + 1)
+                        tempDate = formatDate(startArr(0) + j, startArr(1) + i, startArr(2) + k)
+                        getData tempDate
+                        displayData AmountOfDaysAdded, tempDate
+                        AmountOfDaysAdded = AmountOfDaysAdded + 1
+                        Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                        finishedFirstMonth = True
+                        i = i + 1
+                    Wend
+                'after the first month, it will go from the first of the month to the end of the month
+                Else
+                    i = 1
+                    While i <> (GetDaysInMonth(startArr(0) + j) + 1)
+                        tempDate = formatDate(startArr(0) + j, i, startArr(2) + k)
+                        getData tempDate
+                        displayData AmountOfDaysAdded, tempDate
+                        AmountOfDaysAdded = AmountOfDaysAdded + 1
+                        Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                        i = i + 1
+                    Wend
+                End If
+                j = j + 1
+            Wend
+            k = k + 1
+        Wend
+        'start and end years are now the same. this portions will get the months
+        'to be the same
+        j = 1
+        While j <> endArr(0)
+            i = 1
+            'goes from the first day of the month to the end of the month
+            While i <> GetDaysInMonth(j) + 1
+                tempDate = formatDate(j, i, startArr(2) + k)
+                getData tempDate
+                displayData AmountOfDaysAdded, tempDate
+                AmountOfDaysAdded = AmountOfDaysAdded + 1
+                Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                i = i + 1
+            Wend
+            j = j + 1
+        Wend
+        'years and months are now the same. this portion will get the dates
+        'to the same
+        i = 1
+        While i <> (endArr(1) + 1)
+            tempDate = formatDate(j, i, startArr(2) + k)
+            getData tempDate
+            displayData AmountOfDaysAdded, tempDate
+            AmountOfDaysAdded = AmountOfDaysAdded + 1
+            Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+            i = i + 1
+        Wend
+    End If
+    'hides and resets the status bar showing progress
+    Application.StatusBar = False
+             
+End Sub
+
+'searches the data from the Data Sheet and displays it to the COVID Data sheet for the
+'country or county selected (US only). If it is a country selected, it will sum up
+'all of the cases and deaths for any regions in that country.
+Private Sub displayData(amountDisplayed, dateToDisplay)
+    
+    Dim confirmedCases
+    Dim deaths
+    
+    confirmedCases = 0
+    deaths = 0
+    i = 1
+    
+    'iterates to the selected country
+    'the next few lines save processing time by assuming all data created is the same
+    'format and assumes the country index is the same.
+    'comment out the next portion of code and uncomment for a potentially
+    'more reliable count
+        If CountryIndexFirstIteration Then
+            While ws.Cells(CountryIndex, 12).Value <> CountrySelected
+                CountryIndex = CountryIndex + 1
+            Wend
+            CountryIndexFirstIteration = False
+'            While ws.Cells(i, 12).Value <> CountrySelected
+'                i = i + 1
+'            Wend
+        End If
+        i = CountryIndex
+    
+    'gets the cases and deaths for the country, state, and county selected
+    If CountrySelected = "US" Then
+        'iterates to the selected state
+        While ws.Cells(i, 11).Value <> StateSelected
+            i = i + 1
+        Wend
+        'iterates to the selected county
+        While ws.Cells(i, 10).Value <> CountySelected
+            i = i + 1
+        Wend
+        'sets the cases and deaths for the selected county
+        confirmedCases = CLng(ws.Cells(i, 16).Value)
+        deaths = CLng(ws.Cells(i, 17).Value)
+    Else
+        'adds the sum of cases and deaths for the selected country
+        While ws.Cells(i, 12).Value = CountrySelected
+            confirmedCases = confirmedCases + CLng(ws.Cells(i, 16).Value)
+            deaths = deaths + CLng(ws.Cells(i, 17).Value)
+            i = i + 1
+        Wend
+    End If
+    
+    'displays the date, cases, and deaths
+    Cells(1, (8 + amountDisplayed)).Value = dateToDisplay
+    Cells(2, (8 + amountDisplayed)).Value = confirmedCases
+    Cells(3, (8 + amountDisplayed)).Value = deaths
+
+End Sub
+
+'Formats the data used to retrieve the raw data from online in the format:
+'MM-DD-YYYY
+Private Function formatDate(mToFormat, dToFormat, yToFormat)
+
+    Dim mo As String
+    Dim da As String
+    Dim ye As String
+    
+    If Not mToFormat Like "##" Then
+        mo = "0" & CStr(mToFormat)
+    Else
+        mo = CStr(mToFormat)
+    End If
+    
+    If Not dToFormat Like "##" Then
+        da = "0" & CStr(dToFormat)
+    Else
+        da = CStr(dToFormat)
+    End If
+    
+    ye = CStr(yToFormat)
+    
+    formatDate = mo & "-" & da & "-" & ye
+    
+End Function
+
+'gets the raw data from online and posts it to the Data sheet. Note, this creates a connection
+'to the site, so the connection needs to be closed, which it is in the GetDataCommandBtn sub.
+Private Sub getData(dateToCheck)
+
+    'sets the URL to fetch the data from the appropriate date
+    URL = "TEXT;https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/" & dateToCheck & ".csv"
+    
+    'populates the COVID Data sheet with the data from the date given
+    With ws.QueryTables.Add(Connection:=URL, Destination:=Worksheets("Data Sheet").Range("I4"))
+        .Name = "test"
+        .FieldNames = True
+        .RowNumbers = False
+        .FillAdjacentFormulas = False
+        .PreserveFormatting = True
+        .RefreshOnFileOpen = False
+        .RefreshStyle = xlOverwriteCells
+        .SavePassword = False
+        .SaveData = True
+        .AdjustColumnWidth = True
+        .RefreshPeriod = 0
+        .TextFilePromptOnRefresh = False
+        .TextFilePlatform = 437
+        .TextFileStartRow = 1
+        .TextFileParseType = xlDelimited
+        .TextFileTextQualifier = xlTextQualifierDoubleQuote
+        .TextFileConsecutiveDelimiter = False
+        .TextFileTabDelimiter = False
+        .TextFileSemicolonDelimiter = False
+        .TextFileCommaDelimiter = True
+        .TextFileSpaceDelimiter = False
+        .TextFileColumnDataTypes = Array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+        .TextFileTrailingMinusNumbers = True
+        .Refresh BackgroundQuery:=False
+    End With
+    
+End Sub
+
+'returns how many days are in that month. Assumes 28 days in FEB
+Private Function GetDaysInMonth(month)
+
+    Select Case (month Mod 12)
+        Case 0, 1, 3, 5, 7, 8, 10
+            GetDaysInMonth = 31
+        Case 4, 6, 9, 11
+            GetDaysInMonth = 30
+        Case Else
+            GetDaysInMonth = 28
+    End Select
+
+End Function
+
+'Gets and returns the total days between the start and stop days
+Private Function getTotalDays(ByRef startArr() As Integer, ByRef endArr() As Integer) As Integer
+
+    Dim numberOfDays As Long
+    Dim i
+    
+    numberOfDays = 0
+    
+    'start and stop days are in the same year
+    If startArr(2) = endArr(2) Then
+        'start and stop days are in the same month
+        If startArr(0) = endArr(0) Then
+            'checks that the end date is after the start date
+            If endArr(1) > startArr(1) Then
+                numberOfDays = endArr(1) - startArr(1)
+            End If
+        Else
+            'start and end dates are in different months
+            i = 0
+            While (startArr(0) + i) <> (endArr(0))
+                numberOfDays = numberOfDays + (GetDaysInMonth(startArr(0) + i))
+                i = i + 1
+            Wend
+            numberOfDays = numberOfDays - startArr(1) + endArr(1)
+            End If
+    Else
+        'start date and end date are in different years
+        i = 0
+        'adds the remaining days from the year to the next year
+        While (startArr(0) + i) <> 13
+            numberOfDays = numberOfDays + (GetDaysInMonth(startArr(0) + i))
+            i = i + 1
+        Wend
+        i = 1
+        'if start and end dates are over two years apart, adds 356 days per year
+        While (startArr(2) + i) <> endArr(2)
+            numberOfDays = numberOfDays + 365
+            i = i + 1
+        Wend
+        i = 0
+        'iterates from the end date to the start of the year (ie JAN)
+        While (endArr(0) - i) <> 0
+            numberOfDays = numberOfDays + (GetDaysInMonth(endArr(0) - i))
+            i = i + 1
+        Wend
+        numberOfDays = numberOfDays - startArr(1) - (GetDaysInMonth(endArr(0)) - endArr(1))
+    End If
+
+    getTotalDays = numberOfDays
+
+End Function
+
+'calculates and displays the percent change between a day and the previous day.
+Private Sub PercentChangedCommandBtn_Click()
+
+    Dim i
+    Dim oldValueCases
+    Dim newValueCases
+    Dim oldValueDeaths
+    Dim newValueDeaths
+    
+    Cells(4, 7).Value = "Percent Changed Cases: (%)"
+    Cells(5, 7).Value = "Percent Changed Deaths: (%)"
+    oldValueCases = Cells(2, 8).Value
+    oldValueDeaths = Cells(3, 8).Value
+    i = 9
+    
+    'sets the current value and performs the math: (today - yesterday) / yesterday
+    While Cells(1, i).Value <> ""
+        newValueCases = Cells(2, i).Value
+        newValueDeaths = Cells(3, i).Value
+        Cells(4, i).Value = (newValueCases - oldValueCases) / oldValueCases * 100
+        Cells(5, i).Value = (newValueDeaths - oldValueDeaths) / oldValueDeaths * 100
+        oldValueCases = newValueCases
+        oldValueDeaths = newValueDeaths
+        i = i + 1
+    Wend
+
+End Sub
+
+'allows tab to complete as well as populates the combo box with the states
+Private Sub StateComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+
+    Dim j
+    Dim k
+    Dim countiesArray() As String
+    
+    ReDim countiesArray(0 To 0)
+    selectedState = StateComboBox.Value
+    
+    'tabs out of the Combo Box
+    If KeyCode = 9 Or KeyCode = 13 Then
+        ActiveCell.Offset(1).Select
+    End If
+     
+    'iterates through the counties
+    For i = 460 To 3731
+        'finds the selected state, which is where the counties begin
+        If Cells(i, 3).Value = selectedState Then
+            j = i
+            k = 0
+            'iterates through the counties for the selected state
+            While Cells(j, 3).Value = selectedState
+                'redimensions the counties array
+                If k > 0 Then
+                    ReDim Preserve countiesArray(0 To k)
+                End If
+                'adds the county to the counties array
+                countiesArray(k) = Cells(j, 4).Value
+                k = k + 1
+                j = j + 1
+            Wend
+            'clears the combo box and then sets the combo box
+            'to the county array and exits the for loop
+            CountyComboBox.Clear
+            CountyComboBox.List = countiesArray
+            Exit For
+        End If
+    Next i
+    
+End Sub
+
+'allows tab to complete as well as populates the combo box with the countries
+Private Sub CountryComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+
+    'tabs out of the country combo box
+    If KeyCode = 9 Or KeyCode = 13 Then
+        ActiveCell.Offset(1).Select
+    End If
+
+    'displays the county and state combo boxes if the
+    'selected country is the US
+    If CountryComboBox.Value = "US" Then
+        StateComboBox.Visible = True
+        CountyComboBox.Visible = True
+        Cells(13, 4).Value = "State Selected"
+        Cells(14, 4).Interior.Color = RGB(255, 255, 0)
+        Cells(17, 4).Value = "County Selected"
+        Cells(18, 4).Interior.Color = RGB(255, 255, 0)
+        GetDataCommandBtn.Visible = False
+        ClearDataCommandBtn.Visible = False
+    Else
+        StateComboBox.Visible = False
+        CountyComboBox.Visible = False
+        Cells(13, 4).Clear
+        Cells(14, 4).Clear
+        Cells(17, 4).Clear
+        Cells(18, 4).Clear
+        GetDataCommandBtn.Visible = True
+        ClearDataCommandBtn.Visible = True
+    End If
+
+End Sub
+
+'allows tab to complete as well as populates the combo box with the counties
+Private Sub CountyComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+
+    If KeyCode = 9 Or KeyCode = 13 Then
+        ActiveCell.Offset(1).Select
+    End If
+    
+    'displays the get data and clear data buttons
+    GetDataCommandBtn.Visible = True
+    ClearDataCommandBtn.Visible = True
+    
+End Sub
+

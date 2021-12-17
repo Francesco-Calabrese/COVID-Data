@@ -17,23 +17,26 @@ Private Sub ClearDataCommandBtn_Click()
     'clears the data on the COVID Data sheet
     Range(Cells(1, 7), Cells(5, Columns.Count)).ClearContents
     
-    Range("G1").Value = "Date:"
-    Range("G2").Value = "Cases:"
-    Range("G3").Value = "Deaths:"
+    Range("G1").value = "Date:"
+    Range("G2").value = "Cases:"
+    Range("G3").value = "Deaths:"
     
     'clears the selected country, state, and county
-    CountryComboBox.Value = ""
-    StateComboBox.Value = ""
-    CountyComboBox.Value = ""
+    CountryComboBox.value = ""
+    StateComboBox.value = ""
+    CountyComboBox.value = ""
     StateComboBox.Visible = False
     CountyComboBox.Visible = False
+    Cells(11, 1).Clear
     Cells(13, 4).Clear
     Cells(14, 4).Clear
+    Cells(14, 1).Clear
     Cells(17, 4).Clear
     Cells(18, 4).Clear
     
-    'hides the percentage change button
+    'hides the percentage change button and Vaccine Given button
     PercentChangedCommandBtn.Visible = False
+    VaccineGivenCommandBtn.Visible = False
 
 End Sub
 
@@ -57,30 +60,13 @@ Private Sub GetDataCommandBtn_Click()
     
     'checks to see if the user selected a country
     If Range("D10") <> "" Then
-        'checks to see if US was selected as the country
-        If Range("D10") = "US" Then
-            'if US is selected, checks that both state and county are selected
-            If Range("D14") = "" Or Range("D18") = "" Then
-                MsgBox "select a state and county"
-            Else
-                'gets the data from the date range set
-                If startDateCOVID Like "##-##-####" And endDateCOVID Like "##-##-####" Then
-                    GetDataSheet startDateCOVID, endDateCOVID
-                    'displays the percentage change button
-                    PercentChangedCommandBtn.Visible = True
-                Else
-                    MsgBox ("Please update the date format to match MM-DD-YYYY, ex: 01-05-2021")
-                End If
-            End If
+        'gets the data from the date range set
+        If startDateCOVID Like "##-##-####" And endDateCOVID Like "##-##-####" Then
+            GetDataSheet startDateCOVID, endDateCOVID
+            'displays the percentage change button and vaccine given button
+            AddAdditionalButtons
         Else
-            'gets the data from the date range set
-            If startDateCOVID Like "##-##-####" And endDateCOVID Like "##-##-####" Then
-                GetDataSheet startDateCOVID, endDateCOVID
-                'displays the percentage change button
-                PercentChangedCommandBtn.Visible = True
-            Else
-                MsgBox ("Please update the date format to match MM-DD-YYYY, ex: 01-05-2021")
-            End If
+            MsgBox ("Please update the date format to match MM-DD-YYYY, ex: 01-05-2021")
         End If
     Else
         MsgBox "select a country"
@@ -95,6 +81,21 @@ Private Sub GetDataCommandBtn_Click()
     'return view to main sheet
     Sheets("COVID Data").Activate
     
+End Sub
+
+Private Sub AddAdditionalButtons()
+
+    'displays the percentage change button
+    PercentChangedCommandBtn.Visible = True
+    
+    'checks to see if vaccine information exists for the country selected and displays the button
+    For i = 3750 To 3972
+        If Cells(i, 4).value = Cells(10, 4).value Then
+            VaccineGivenCommandBtn.Visible = True
+            Exit For
+        End If
+    Next i
+
 End Sub
 
 Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
@@ -145,7 +146,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
                 i = 0
                 While (startArr(1) + i) <> (GetDaysInMonth(startArr(0) + j) + 1)
                     tempDate = formatDate(startArr(0) + j, startArr(1) + i, startArr(2))
-                    getData tempDate
+                    getData tempDate, "COVID"
                     displayData AmountOfDaysAdded, tempDate
                     finishedFirstMonth = True
                     AmountOfDaysAdded = AmountOfDaysAdded + 1
@@ -158,7 +159,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
                 i = 1
                 While i <> (GetDaysInMonth(startArr(0) + j) + 1)
                     tempDate = formatDate(startArr(0) + j, i, startArr(2))
-                    getData tempDate
+                    getData tempDate, "COVID"
                     displayData AmountOfDaysAdded, tempDate
                     AmountOfDaysAdded = AmountOfDaysAdded + 1
                     Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -172,7 +173,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
         i = 1
         While i <> (endArr(1) + 1)
             tempDate = formatDate(startArr(0) + j, i, startArr(2))
-            getData tempDate
+            getData tempDate, "COVID"
             displayData AmountOfDaysAdded, tempDate
             AmountOfDaysAdded = AmountOfDaysAdded + 1
             Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -191,7 +192,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
                 If Not finishedFirstMonth Then
                     While (startArr(1) + i) <> (GetDaysInMonth(startArr(0) + j) + 1)
                         tempDate = formatDate(startArr(0) + j, startArr(1) + i, startArr(2) + k)
-                        getData tempDate
+                        getData tempDate, "COVID"
                         displayData AmountOfDaysAdded, tempDate
                         AmountOfDaysAdded = AmountOfDaysAdded + 1
                         Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -203,7 +204,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
                     i = 1
                     While i <> (GetDaysInMonth(startArr(0) + j) + 1)
                         tempDate = formatDate(startArr(0) + j, i, startArr(2) + k)
-                        getData tempDate
+                        getData tempDate, "COVID"
                         displayData AmountOfDaysAdded, tempDate
                         AmountOfDaysAdded = AmountOfDaysAdded + 1
                         Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -222,7 +223,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
             'goes from the first day of the month to the end of the month
             While i <> GetDaysInMonth(j) + 1
                 tempDate = formatDate(j, i, startArr(2) + k)
-                getData tempDate
+                getData tempDate, "COVID"
                 displayData AmountOfDaysAdded, tempDate
                 AmountOfDaysAdded = AmountOfDaysAdded + 1
                 Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -235,7 +236,7 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
         i = 1
         While i <> (endArr(1) + 1)
             tempDate = formatDate(j, i, startArr(2) + k)
-            getData tempDate
+            getData tempDate, "COVID"
             displayData AmountOfDaysAdded, tempDate
             AmountOfDaysAdded = AmountOfDaysAdded + 1
             Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
@@ -265,7 +266,7 @@ Private Sub displayData(amountDisplayed, dateToDisplay)
     'comment out the next portion of code and uncomment for a potentially
     'more reliable count
         If CountryIndexFirstIteration Then
-            While ws.Cells(CountryIndex, 12).Value <> CountrySelected
+            While ws.Cells(CountryIndex, 12).value <> CountrySelected
                 CountryIndex = CountryIndex + 1
             Wend
             CountryIndexFirstIteration = False
@@ -275,32 +276,43 @@ Private Sub displayData(amountDisplayed, dateToDisplay)
         End If
         i = CountryIndex
     
-    'gets the cases and deaths for the country, state, and county selected
-    If CountrySelected = "US" Then
+    'checks if the US is selected and a state, if no state is selected, all US cases will be added
+    'in the else statement, with the non-US countries
+    If CountrySelected = "US" And StateSelected <> "" Then
         'iterates to the selected state
-        While ws.Cells(i, 11).Value <> StateSelected
+        While ws.Cells(i, 11).value <> StateSelected
             i = i + 1
         Wend
-        'iterates to the selected county
-        While ws.Cells(i, 10).Value <> CountySelected
-            i = i + 1
-        Wend
-        'sets the cases and deaths for the selected county
-        confirmedCases = CLng(ws.Cells(i, 16).Value)
-        deaths = CLng(ws.Cells(i, 17).Value)
+        'checks if a county is selected, if not, the total cases and deaths will be found
+        If CountySelected = "" Then
+            'adds the sum of cases for the selected state
+            While ws.Cells(i, 11).value = StateSelected
+                confirmedCases = confirmedCases + CLng(ws.Cells(i, 16).value)
+                deaths = deaths + CLng(ws.Cells(i, 17).value)
+                i = i + 1
+            Wend
+        Else
+            'iterates to the selected county
+            While ws.Cells(i, 10).value <> CountySelected
+                i = i + 1
+            Wend
+            'sets the cases and deaths for the selected county
+            confirmedCases = CLng(ws.Cells(i, 16).value)
+            deaths = CLng(ws.Cells(i, 17).value)
+        End If
     Else
         'adds the sum of cases and deaths for the selected country
-        While ws.Cells(i, 12).Value = CountrySelected
-            confirmedCases = confirmedCases + CLng(ws.Cells(i, 16).Value)
-            deaths = deaths + CLng(ws.Cells(i, 17).Value)
+        While ws.Cells(i, 12).value = CountrySelected
+            confirmedCases = confirmedCases + CLng(ws.Cells(i, 16).value)
+            deaths = deaths + CLng(ws.Cells(i, 17).value)
             i = i + 1
         Wend
     End If
     
     'displays the date, cases, and deaths
-    Cells(1, (8 + amountDisplayed)).Value = dateToDisplay
-    Cells(2, (8 + amountDisplayed)).Value = confirmedCases
-    Cells(3, (8 + amountDisplayed)).Value = deaths
+    Cells(1, (8 + amountDisplayed)).value = dateToDisplay
+    Cells(2, (8 + amountDisplayed)).value = confirmedCases
+    Cells(3, (8 + amountDisplayed)).value = deaths
 
 End Sub
 
@@ -332,11 +344,17 @@ End Function
 
 'gets the raw data from online and posts it to the Data sheet. Note, this creates a connection
 'to the site, so the connection needs to be closed, which it is in the GetDataCommandBtn sub.
-Private Sub getData(dateToCheck)
+Private Sub getData(dateToCheck, dataType)
 
     'sets the URL to fetch the data from the appropriate date
-    URL = "TEXT;https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/" & dateToCheck & ".csv"
-    
+    If dataType = "COVID" Then
+        URL = "TEXT;https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/" & dateToCheck & ".csv"
+    ElseIf dataType = "vaccine" Then
+        URL = "TEXT;https://raw.githubusercontent.com/BloombergGraphics/covid-vaccine-tracker-data/master/data/historical-global-doses-administered.csv"
+    ElseIf dataType = "USVaccine" Then
+        URL = "TEXT;https://raw.githubusercontent.com/BloombergGraphics/covid-vaccine-tracker-data/master/data/historical-usa-doses-administered.csv"
+    End If
+        
     'populates the COVID Data sheet with the data from the date given
     With ws.QueryTables.Add(Connection:=URL, Destination:=Worksheets("Data Sheet").Range("I4"))
         .Name = "test"
@@ -433,6 +451,141 @@ Private Function getTotalDays(ByRef startArr() As Integer, ByRef endArr() As Int
 
 End Function
 
+'gets the total number of vaccines given for the selected country/state (US only)
+'based on the date range
+Private Sub VaccineGivenCommandBtn_Click()
+
+    Dim countryOrStateCode
+    Dim dateArr()
+    Dim dateArrStr() As String
+    Dim startArr()
+    Dim startArrStr() As String
+    Dim endArr()
+    Dim endArrStr() As String
+    
+    ReDim dateArr(0 To 2)
+    ReDim startArr(0 To 2)
+    ReDim endArr(0 To 2)
+    
+    CountrySelected = Cells(10, 4).value
+    StateSelected = Cells(14, 4).value
+    CountySelected = Cells(18, 4).value
+    
+    Cells(4, 7).value = "Number of Vaccines Given:"
+    Cells(5, 7).value = "Percent change of vaccines:"
+    startArrStr = Split(Cells(6, 4).value, "-")
+    endArrStr = Split(Cells(6, 5).value, "-")
+    
+    For i = 0 To 2
+        ReDim Preserve startArr(0 To i)
+        ReDim Preserve endArr(0 To i)
+        startArr(i) = CInt(startArrStr(i))
+        endArr(i) = CInt(endArrStr(i))
+    Next i
+    
+    'clears the data on the data sheet
+    Set ws = Sheets("Data Sheet")
+    ws.Cells.Clear
+    
+    'sets the country code to get the data
+    For i = 3750 To 3972
+        If CountrySelected = Cells(i, 4).value Then
+            countryOrStateCode = Cells(i, 3).value
+            Exit For
+        End If
+    Next i
+    
+    'sets the state code since a US State was selected
+    If StateSelected <> "" Then
+        For i = 400 To 450
+            If Cells(i, 4).value = StateSelected Then
+                countryOrStateCode = Cells(i, 5).value
+                Exit For
+            End If
+        Next i
+    End If
+    
+    'gets the data from the site and puts it in the Data Sheet worksheet
+    If CountrySelected = "US" And StateSelected <> "" Then
+        getData "", "USVaccine"
+    Else
+        getData "", "vaccine"
+    End If
+    
+    i = 5
+    'iterates through the data sheet and gets the starting row of the country or US State
+    While ws.Cells(i, 9).value <> countryOrStateCode
+        i = i + 1
+    Wend
+    
+    ReDim dateArr(0 To 2)
+    While ws.Cells(i, 9).value = countryOrStateCode
+        'date stored as month / day / year
+        dateArrStr = Split(ws.Cells(i, 10), "/")
+        dateArr(0) = CInt(dateArrStr(0))
+        dateArr(1) = CInt(dateArrStr(1))
+        dateArr(2) = CInt(dateArrStr(2))
+
+        'checks that the pulled year is between the desired years
+        If dateArr(2) >= startArr(2) And dateArr(2) <= endArr(2) Then
+            'checks that the pulled month is between the desired months
+            If dateArr(0) >= startArr(0) And dateArr(0) <= endArr(0) Then
+                If dateArr(0) = startArr(0) Then
+                    If dateArr(1) >= startArr(1) Then
+                        'display the vaccine data
+                        DisplayVaccineData ws.Cells(i, 10).value, ws.Cells(i, 11).value
+                    End If
+                ElseIf dateArr(0) = endArr(0) Then
+                    If dateArr(1) <= endArr(1) Then
+                        'display the vaccine data
+                        DisplayVaccineData ws.Cells(i, 10).value, ws.Cells(i, 11).value
+                    End If
+                Else
+                    'display the vaccine data
+                    DisplayVaccineData ws.Cells(i, 10).value, ws.Cells(i, 11).value
+                End If
+            End If
+        End If
+        i = i + 1
+    Wend
+    
+    'deletes all of the open connections in the workbook
+    Dim conn As WorkbookConnection
+    For Each conn In ActiveWorkbook.Connections
+        conn.Delete
+    Next conn
+
+    'alerts the user that the US vaccine information is for the state and not the county
+    If CountrySelected = "US" And StateSelected <> "" And CountySelected <> "" Then
+        MsgBox "The following vaccine data is for the state of " & StateSelected
+    End If
+
+End Sub
+
+'displays the vaccine count to the correct date on the COVID Data sheet
+Private Sub DisplayVaccineData(vaxDate, vaxValue)
+
+    Dim i
+    
+    i = 8
+    
+    'iterates through the COVID Data main page searching for the correct date
+    Do While Cells(1, i).value <> ""
+        If Cells(1, i).value = vaxDate Then
+            'once the correct date is found, saves the value to the covid sheet
+            Cells(4, i).value = vaxValue
+            'gets the percent change in vaccines
+            If IsNumeric(Cells(4, i - 1).value) And IsNumeric(Cells(4, i).value) And Cells(4, i - 1).value <> "" _
+                And Cells(4, i).value <> "" Then
+                'calculates the percent change in vaccines: (today - yesterday) / yesterday
+                Cells(5, i).value = ((CLng(Cells(4, i).value) - CLng(Cells(4, i - 1).value)) / CLng(Cells(4, i - 1).value)) * 100
+            End If
+            Exit Do
+        End If
+        i = i + 1
+    Loop
+End Sub
+
 'calculates and displays the percent change between a day and the previous day.
 Private Sub PercentChangedCommandBtn_Click()
 
@@ -442,18 +595,18 @@ Private Sub PercentChangedCommandBtn_Click()
     Dim oldValueDeaths
     Dim newValueDeaths
     
-    Cells(4, 7).Value = "Percent Changed Cases: (%)"
-    Cells(5, 7).Value = "Percent Changed Deaths: (%)"
-    oldValueCases = Cells(2, 8).Value
-    oldValueDeaths = Cells(3, 8).Value
+    Cells(4, 7).value = "Percent Changed Cases: (%)"
+    Cells(5, 7).value = "Percent Changed Deaths: (%)"
+    oldValueCases = Cells(2, 8).value
+    oldValueDeaths = Cells(3, 8).value
     i = 9
     
     'sets the current value and performs the math: (today - yesterday) / yesterday
-    While Cells(1, i).Value <> ""
-        newValueCases = Cells(2, i).Value
-        newValueDeaths = Cells(3, i).Value
-        Cells(4, i).Value = (newValueCases - oldValueCases) / oldValueCases * 100
-        Cells(5, i).Value = (newValueDeaths - oldValueDeaths) / oldValueDeaths * 100
+    While Cells(1, i).value <> ""
+        newValueCases = Cells(2, i).value
+        newValueDeaths = Cells(3, i).value
+        Cells(4, i).value = (newValueCases - oldValueCases) / oldValueCases * 100
+        Cells(5, i).value = (newValueDeaths - oldValueDeaths) / oldValueDeaths * 100
         oldValueCases = newValueCases
         oldValueDeaths = newValueDeaths
         i = i + 1
@@ -469,7 +622,7 @@ Private Sub StateComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal 
     Dim countiesArray() As String
     
     ReDim countiesArray(0 To 0)
-    selectedState = StateComboBox.Value
+    selectedState = StateComboBox.value
     
     'tabs out of the Combo Box
     If KeyCode = 9 Or KeyCode = 13 Then
@@ -479,17 +632,17 @@ Private Sub StateComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal 
     'iterates through the counties
     For i = 460 To 3731
         'finds the selected state, which is where the counties begin
-        If Cells(i, 3).Value = selectedState Then
+        If Cells(i, 3).value = selectedState Then
             j = i
             k = 0
             'iterates through the counties for the selected state
-            While Cells(j, 3).Value = selectedState
+            While Cells(j, 3).value = selectedState
                 'redimensions the counties array
                 If k > 0 Then
                     ReDim Preserve countiesArray(0 To k)
                 End If
                 'adds the county to the counties array
-                countiesArray(k) = Cells(j, 4).Value
+                countiesArray(k) = Cells(j, 4).value
                 k = k + 1
                 j = j + 1
             Wend
@@ -500,6 +653,11 @@ Private Sub StateComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal 
             Exit For
         End If
     Next i
+    
+    CountyComboBox.Visible = True
+    Cells(17, 4).value = "County Selected"
+    Cells(18, 4).Interior.Color = RGB(255, 255, 0)
+    Cells(14, 1).value = "Select County:"
     
 End Sub
 
@@ -513,24 +671,20 @@ Private Sub CountryComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVa
 
     'displays the county and state combo boxes if the
     'selected country is the US
-    If CountryComboBox.Value = "US" Then
+    If CountryComboBox.value = "US" Then
         StateComboBox.Visible = True
-        CountyComboBox.Visible = True
-        Cells(13, 4).Value = "State Selected"
+        Cells(13, 4).value = "State Selected"
         Cells(14, 4).Interior.Color = RGB(255, 255, 0)
-        Cells(17, 4).Value = "County Selected"
-        Cells(18, 4).Interior.Color = RGB(255, 255, 0)
-        GetDataCommandBtn.Visible = False
-        ClearDataCommandBtn.Visible = False
+        Cells(11, 1).value = "Select State:"
     Else
         StateComboBox.Visible = False
         CountyComboBox.Visible = False
+        Cells(11, 1).Clear
         Cells(13, 4).Clear
         Cells(14, 4).Clear
+        Cells(14, 1).Clear
         Cells(17, 4).Clear
         Cells(18, 4).Clear
-        GetDataCommandBtn.Visible = True
-        ClearDataCommandBtn.Visible = True
     End If
 
 End Sub
@@ -542,9 +696,4 @@ Private Sub CountyComboBox_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal
         ActiveCell.Offset(1).Select
     End If
     
-    'displays the get data and clear data buttons
-    GetDataCommandBtn.Visible = True
-    ClearDataCommandBtn.Visible = True
-    
 End Sub
-

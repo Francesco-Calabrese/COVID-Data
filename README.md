@@ -33,4 +33,5 @@ Displays COVID data for selected country during a given time range
 
 The vaccine doses data are retrieved from BloombergGraphics GitHub account (https://github.com/BloombergGraphics/covid-vaccine-tracker-data). 
 
-![image](https://user-images.githubusercontent.com/96243400/146611084-39e304cd-ff18-4f82-af41-c22e92b142bc.png)
+![image](https://user-images.githubusercontent.com/96243400/146611190-017d4b6a-e74b-4a73-811c-63d52179e497.png)
+

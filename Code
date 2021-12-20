@@ -15,7 +15,7 @@ Private Sub ClearDataCommandBtn_Click()
     ws.Cells.Clear
     
     'clears the data on the COVID Data sheet
-    Range(Cells(1, 7), Cells(5, Columns.Count)).ClearContents
+    Range(Cells(1, 7), Cells(6, Columns.Count)).ClearContents
     
     Range("G1").value = "Date:"
     Range("G2").value = "Cases:"
@@ -37,6 +37,7 @@ Private Sub ClearDataCommandBtn_Click()
     'hides the percentage change button and Vaccine Given button
     PercentChangedCommandBtn.Visible = False
     VaccineGivenCommandBtn.Visible = False
+    DailyChangesCommandBtn.Visible = False
 
 End Sub
 
@@ -95,6 +96,15 @@ Private Sub AddAdditionalButtons()
             Exit For
         End If
     Next i
+    
+    'displays the daily changes button
+    DailyChangesCommandBtn.Visible = True
+    
+    'displays the total change of cases and deaths
+    Cells(6, 8).value = "Change in Cases:"
+    Cells(6, 9).value = Cells(2, AmountOfDaysAdded + 7).value - Cells(2, 8).value
+    Cells(6, 10).value = "Change in Deaths:"
+    Cells(6, 11).value = Cells(3, AmountOfDaysAdded + 7).value - Cells(3, 8).value
 
 End Sub
 
@@ -171,14 +181,27 @@ Private Sub GetDataSheet(startDateCOVID, endDateCOVID)
         'start and end months are now the same. will iterate from the first
         'to the end date of the month
         i = 1
-        While i <> (endArr(1) + 1)
-            tempDate = formatDate(startArr(0) + j, i, startArr(2))
-            getData tempDate, "COVID"
-            displayData AmountOfDaysAdded, tempDate
-            AmountOfDaysAdded = AmountOfDaysAdded + 1
-            Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
-            i = i + 1
-        Wend
+        If Not finishedFirstMonth Then
+            i = 0
+            While (startArr(1) + i) <> (endArr(1) + 1)
+                tempDate = formatDate(startArr(0) + j, startArr(1) + i, startArr(2))
+                getData tempDate, "COVID"
+                displayData AmountOfDaysAdded, tempDate
+                AmountOfDaysAdded = AmountOfDaysAdded + 1
+                Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                i = i + 1
+            Wend
+            finishedFirstMonth = True
+        Else
+            While i <> (endArr(1) + 1)
+                tempDate = formatDate(startArr(0) + j, i, startArr(2))
+                getData tempDate, "COVID"
+                displayData AmountOfDaysAdded, tempDate
+                AmountOfDaysAdded = AmountOfDaysAdded + 1
+                Application.StatusBar = (AmountOfDaysAdded / numberOfDays * 100) & "% Completed"
+                i = i + 1
+            Wend
+        End If
     Else
         'start and end years are different
         k = 0
@@ -265,16 +288,16 @@ Private Sub displayData(amountDisplayed, dateToDisplay)
     'format and assumes the country index is the same.
     'comment out the next portion of code and uncomment for a potentially
     'more reliable count
-        If CountryIndexFirstIteration Then
-            While ws.Cells(CountryIndex, 12).value <> CountrySelected
-                CountryIndex = CountryIndex + 1
-            Wend
-            CountryIndexFirstIteration = False
-'            While ws.Cells(i, 12).Value <> CountrySelected
-'                i = i + 1
+'        If CountryIndexFirstIteration Then
+'            While ws.Cells(CountryIndex, 12).value <> CountrySelected
+'                CountryIndex = CountryIndex + 1
 '            Wend
-        End If
-        i = CountryIndex
+'            CountryIndexFirstIteration = False
+            While ws.Cells(i, 12).value <> CountrySelected
+                i = i + 1
+            Wend
+'        End If
+'        i = CountryIndex
     
     'checks if the US is selected and a state, if no state is selected, all US cases will be added
     'in the else statement, with the non-US countries
@@ -451,6 +474,27 @@ Private Function getTotalDays(ByRef startArr() As Integer, ByRef endArr() As Int
 
 End Function
 
+'displays the daily changes between one day and the previous day
+Private Sub DailyChangesCommandBtn_Click()
+
+    Dim i
+    
+    'clears the region where the daily change data will go
+    Range(Cells(4, 7), Cells(5, Columns.Count)).ClearContents
+    
+    Cells(4, 7).value = "Daily Change Cases:"
+    Cells(5, 7).value = "Daily Change Deaths:"
+    
+    i = 9
+    
+    While Cells(1, i).value <> ""
+        Cells(4, i).value = Cells(2, i).value - Cells(2, i - 1).value
+        Cells(5, i).value = Cells(3, i).value - Cells(3, i - 1).value
+        i = i + 1
+    Wend
+    
+End Sub
+
 'gets the total number of vaccines given for the selected country/state (US only)
 'based on the date range
 Private Sub VaccineGivenCommandBtn_Click()
@@ -466,6 +510,9 @@ Private Sub VaccineGivenCommandBtn_Click()
     ReDim dateArr(0 To 2)
     ReDim startArr(0 To 2)
     ReDim endArr(0 To 2)
+    
+    'clears the region where the vaccine data will go
+    Range(Cells(4, 7), Cells(5, Columns.Count)).ClearContents
     
     CountrySelected = Cells(10, 4).value
     StateSelected = Cells(14, 4).value
@@ -594,6 +641,9 @@ Private Sub PercentChangedCommandBtn_Click()
     Dim newValueCases
     Dim oldValueDeaths
     Dim newValueDeaths
+    
+    'clears the range the percent change data will go
+    Range(Cells(4, 7), Cells(5, Columns.Count)).ClearContents
     
     Cells(4, 7).value = "Percent Changed Cases: (%)"
     Cells(5, 7).value = "Percent Changed Deaths: (%)"

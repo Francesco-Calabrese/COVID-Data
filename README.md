@@ -31,7 +31,12 @@ Displays COVID data for selected country during a given time range
 1. If the US is selected, the user is no longer requred to selected a state or county. If a state is selected, the user is no longer required to select a county. It will add up the sum of the country or selected state.
 2. Added a Vaccine Doses Given Button, which gets the vaccine data for the selected country or state (US only). This button is displayed once the COVID data is retrieved. 
 
+3. Added daily changes button to see the difference in cases/deaths between two days.
+4. Added the total change in cases and deaths from the time range given.
+
 The vaccine doses data is retrieved from BloombergGraphics GitHub account (https://github.com/BloombergGraphics/covid-vaccine-tracker-data). 
 
 ![image](https://user-images.githubusercontent.com/96243400/146611190-017d4b6a-e74b-4a73-811c-63d52179e497.png)
+
+![image](https://user-images.githubusercontent.com/96243400/146814573-e43b1e9e-643d-4c45-bdc6-108b081a72b8.png)
 
